@@ -11,6 +11,7 @@
 
   <build_depend>python3-setuptools</build_depend>
 
+  <exec_depend>comarmor</exec_depend>
   <exec_depend>python3-comarmors</exec_depend>
   <!-- <exec_depend>python3-argcomplete</exec_depend> -->
   <exec_depend>python3-pkg-resources</exec_depend>
