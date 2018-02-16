@@ -36,7 +36,7 @@ class CriteriasHelpter:
         pass
 
 
-# class DDSCriteriasHelper(CriteriasHelpter):
+# class KeymintCriteriasHelper(CriteriasHelpter):
 #     """Help build permission into artifacts."""
 #
 #     _dds_expression_list_types = ['partitions', 'data_tags']
@@ -123,57 +123,56 @@ class PermissionsHelper:
 class ComArmorPermissionsHelper(PermissionsHelper):
     """Help build permission into artifacts."""
 
-    # _dds_criteria_types = ['publish', 'subscribe', 'relay']
-
     def __init__(self):
         pass
-        # self.dds_criterias_helper = DDSCriteriasHelper()
+        # self.keymint_criterias_helper = KeymintCriteriasHelper()
 
-    # def _build_criterias(self, context, criteria):
-    #     formater = getattr(self.dds_criterias_helper, criteria.tag)
-    #     return formater(context, criteria)
+    def _build_criterias(self, context, comarmor_rule):
+        keymint_criterias = ElementTree.Element(comarmor_rule.tag + 's')
+        keymint_criteria = ElementTree.Element(comarmor_rule.tag)
+        keymint_criteria.text = comarmor_rule.find('attachment').text
+        keymint_criterias.append(keymint_criteria)
+        return keymint_criterias
 
-    # def _build_rule(self, context, rule):
-    #     dds_rule = ElementTree.Element(rule.tag)
-    #
-    #     domains = rule.find('domains')
-    #     dds_rule.append(domains)
-    #     rule.remove(domains)
-    #
-    #     for criteria in rule.getchildren():
-    #         if criteria.tag in self._dds_criteria_types:
-    #             dds_rule.append(criteria)
-    #         else:
-    #             dds_criterias = self._build_criterias(context, criteria)
-    #             dds_rule.extend(dds_criterias)
-    #     return dds_rule
+    def _build_rules(self, context, comarmor_rules):
+        keymint_rules = ElementTree.Element('keymint_rules')
 
-    # def _build_grant(self, context, grant):
-    #
-    #     dds_grant = ElementTree.Element('grant')
-    #
-    #     name = grant.get('name')
-    #     dds_grant.set('name', name)
-    #
-    #     subject_name = grant.find('subject_name')
-    #     subject_name.text = subject_name.text.format(**grant.attrib)
-    #     dds_grant.append(subject_name)
-    #     grant.remove(subject_name)
-    #
-    #     validity = grant.find('validity')
-    #     dds_grant.append(validity)
-    #     grant.remove(validity)
-    #
-    #     default = grant.find('default')
-    #     grant.remove(default)
-    #
-    #     for rule in grant.getchildren():
-    #         dds_rule = self._build_rule(context, rule)
-    #         dds_grant.append(dds_rule)
-    #
-    #     dds_grant.append(default)
-    #
-    #     return dds_grant
+        for comarmor_rule in comarmor_rules.getchildren():
+            comarmor_permissions = comarmor_rule.find('permissions')
+            for comarmor_permission in comarmor_permissions.getchildren():
+                keymint_rule = ElementTree.Element(comarmor_permission.tag)
+                keymint_criterias = self._build_criterias(context, comarmor_rule)
+                keymint_rule.append(keymint_criterias)
+                keymint_rules.append(keymint_rule)
+
+        return keymint_rules
+
+    def _build_grant(self, context, profile_storage):
+
+        grant = ElementTree.Element('grant')
+        grant.set('name', context.pkg_name)
+
+        profile_storage_filtered = profile_storage.filter_profiles(key='/' + context.pkg_name)
+
+        deny_rule = ElementTree.Element('deny_rule')
+        comarmor_deny_rules = profile_storage_filtered.findall('.//*[@qualifier="DENY"]')
+        keymint_deny_rules = self._build_rules(context, comarmor_deny_rules)
+        deny_rule.extend(keymint_deny_rules)
+        if len(deny_rule):
+            grant.append(deny_rule)
+
+        allow_rule = ElementTree.Element('allow_rule')
+        comarmor_allow_rules = profile_storage_filtered.findall('.//*[@qualifier="ALLOW"]')
+        keymint_allow_rules = self._build_rules(context, comarmor_allow_rules)
+        allow_rule.extend(keymint_allow_rules)
+        if len(allow_rule):
+            grant.append(allow_rule)
+
+        default =  ElementTree.Element('default')
+        default.text = "DENY"
+        grant.append(default)
+
+        return grant
 
     def create(self, context):
         policies = deepcopy(context.profile_manifest.policies)
@@ -184,8 +183,8 @@ class ComArmorPermissionsHelper(PermissionsHelper):
             profile_paths.append(os.path.join(context.profile_space, profile_path.text))
 
         profile_storage = comarmor.parse_profiles(profile_paths)
-        profile_storage_filtered = profile_storage.filter_profiles(key='/' + context.pkg_name)
-        results = profile_storage_filtered.findall('.//*[@qualifier="ALLOW"]')
-        print(comarmor.xml.utils.beautify_xml(results))
+        grant = self._build_grant(context, profile_storage)
 
-        return None
+        print(comarmor.xml.utils.beautify_xml(grant))
+
+        return grant
