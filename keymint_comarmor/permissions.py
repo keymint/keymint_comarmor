@@ -88,8 +88,7 @@ class ComArmorPermissionsHelper(PermissionsHelper):
 
         return grant
 
-    def create(self, context):
-        policies = deepcopy(context.profile_manifest.policies)
+    def _build_permissions(self, context, policies):
         permissions = ElementTree.Element('permissions')
 
         profile_paths = []
@@ -99,6 +98,15 @@ class ComArmorPermissionsHelper(PermissionsHelper):
         profile_storage = comarmor.parse_profiles(profile_paths)
         grant = self._build_grant(context, profile_storage)
 
-        print(comarmor.xml.utils.beautify_xml(grant))
+        permissions.append(grant)
+        return permissions
 
-        return grant
+    def create(self, context):
+        root = ElementTree.Element('package')
+
+        policies = deepcopy(context.profile_manifest.policies)
+        permissions = self._build_permissions(context, policies)
+
+        root.append(permissions)
+        root = tidy_xml(root)
+        return pretty_xml(root)
