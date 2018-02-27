@@ -66,7 +66,7 @@ class ComArmorPermissionsHelper(PermissionsHelper):
         grant = ElementTree.Element('grant')
         grant.set('name', context.pkg_name)
 
-        profile_storage_filtered = profile_storage.filter_profiles(key='/' + context.pkg_name)
+        profile_storage_filtered = profile_storage.filter_profile(key='/' + context.pkg_name)
 
         deny_rule = ElementTree.Element('deny_rule')
         comarmor_deny_rules = profile_storage_filtered.findall('.//*[@qualifier="DENY"]')
