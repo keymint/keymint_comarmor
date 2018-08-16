@@ -50,6 +50,22 @@ class ComArmorPermissionsHelper(PermissionsHelper):
             keymint_criterias.append(keymint_criteria)
         return keymint_criterias
 
+    def _compress_rule(self, context, rule):
+        keymint_rule = ElementTree.Element(rule.tag)
+
+        for criteria in list(rule):
+            keymint_criteria = keymint_rule.find(criteria.tag)
+            if keymint_criteria is None:
+                keymint_rule.append(criteria)
+            else:
+                for criterians in criteria.getchildren():
+                    keymint_criterians = keymint_criteria.find(criterians.tag)
+                    keymint_criterian_texts = list(keymint_criterians.itertext())
+                    for criterian in criterians:
+                        if not criterian.text in keymint_criterian_texts:
+                            keymint_criterians.append(criterian)
+        return keymint_rule
+
     def _build_rules(self, context, comarmor_rules):
         keymint_rules = ElementTree.Element('keymint_rules')
 
@@ -61,6 +77,7 @@ class ComArmorPermissionsHelper(PermissionsHelper):
                 keymint_rule.append(keymint_criterias)
                 keymint_rules.append(keymint_rule)
 
+        keymint_rules = self._compress_rule(context, keymint_rules)
         return keymint_rules
 
     def _build_grant(self, context, profile_storage):
