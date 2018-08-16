@@ -43,9 +43,11 @@ class ComArmorPermissionsHelper(PermissionsHelper):
 
     def _build_criterias(self, context, comarmor_rule):
         keymint_criterias = ElementTree.Element(comarmor_rule.tag + 's')
-        keymint_criteria = ElementTree.Element(comarmor_rule.tag)
-        keymint_criteria.text = comarmor_rule.find('attachment').text
-        keymint_criterias.append(keymint_criteria)
+        comarmor_attachments = comarmor_rule.find('attachments')
+        for comarmor_attachment in list(comarmor_attachments):
+            keymint_criteria = ElementTree.Element(comarmor_rule.tag)
+            keymint_criteria.text = comarmor_attachment.text
+            keymint_criterias.append(keymint_criteria)
         return keymint_criterias
 
     def _build_rules(self, context, comarmor_rules):
