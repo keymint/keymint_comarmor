@@ -12,16 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
 import os
-
 from xml.etree import cElementTree as ElementTree
 
-from copy import deepcopy
-
-import xmlschema
-
 import comarmor
-from comarmor.xml.utils import pretty_xml, tidy_xml, beautify_xml
+from comarmor.xml.utils import beautify_xml
 
 
 class PermissionsHelper:
@@ -39,7 +35,6 @@ class ComArmorPermissionsHelper(PermissionsHelper):
 
     def __init__(self):
         pass
-        # self.keymint_criterias_helper = KeymintCriteriasHelper()
 
     def _build_criterias(self, context, comarmor_rule):
         keymint_criterias = ElementTree.Element(comarmor_rule.tag + 's')
@@ -62,7 +57,7 @@ class ComArmorPermissionsHelper(PermissionsHelper):
                     keymint_criterians = keymint_criteria.find(criterians.tag)
                     keymint_criterian_texts = list(keymint_criterians.itertext())
                     for criterian in criterians:
-                        if not criterian.text in keymint_criterian_texts:
+                        if criterian.text not in keymint_criterian_texts:
                             keymint_criterians.append(criterian)
         return keymint_rule
 
@@ -101,8 +96,8 @@ class ComArmorPermissionsHelper(PermissionsHelper):
         if len(allow_rule):
             grant.append(allow_rule)
 
-        default =  ElementTree.Element('default')
-        default.text = "DENY"
+        default = ElementTree.Element('default')
+        default.text = 'DENY'
         grant.append(default)
 
         return grant
@@ -111,7 +106,7 @@ class ComArmorPermissionsHelper(PermissionsHelper):
         permissions = ElementTree.Element('permissions')
 
         profile_paths = []
-        for profile_path in policies.findall("./policy/comarmor/profile_path"):
+        for profile_path in policies.findall('./policy/comarmor/profile_path'):
             profile_paths.append(os.path.join(context.profile_space, profile_path.text))
 
         profile_storage = comarmor.parse_profiles(profile_paths)
@@ -127,5 +122,4 @@ class ComArmorPermissionsHelper(PermissionsHelper):
         permissions = self._build_permissions(context, policies)
 
         root.append(permissions)
-        root = tidy_xml(root)
-        return pretty_xml(root)
+        return beautify_xml(root)
